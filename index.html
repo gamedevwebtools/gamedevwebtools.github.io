@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Gamedev web tools</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- dependencies and stylesheet -->
+<link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+<link href="css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
+<link href="css/index.css" rel="stylesheet">
+
+<script src="js/dependencies/jquery-2.0.0.min.js"></script>	
+<script src="js/dependencies/bootstrap.min.js"></script>
+<script src="js/dependencies/jquery.jkey.min.js"></script>
+
+</head>
+<body>
+
+<div id="mainContainer" class="container-fluid">
+
+<!--Application bar-->
+<div class="row-fluid">
+<div class="well-small applicationBar">
+
+<form class="form-inline">
+<span id="applicationNotConnectedControls">
+	<span class="applicationBarTitle">
+		<i class="icon-wrench"></i>
+		<b>GDevWebTools</b>
+	</span>
+	<div class="input-append">
+	<input id="serverAddressInput" type="text" value="localhost:8080"/>
+	<button class="btn" type="button" 
+		title="Connect to the application/piping server">Connect</button>
+	</div>	
+</span>
+<span id="applicationConnectedControls" class="dontShowAtStart">
+	<button onClick="application.disconnect();" class="btn" type="button" title="Disconnect">
+	<i class="icon-arrow-left"></i></button>
+	
+	<span id="appTitle" class="applicationBarTitle">
+	<b>Sample app</b>
+	</span>
+
+	<span id="appRuntimeActions">
+	<div class="btn-group">
+	
+	<button onClick="application.activate();" class="btn" type="button" title="Pause/Play">
+	<i id="appActivateIcon" class="icon-pause"></i></button>
+	
+	<button id="appStepButton" class="btn dontShowAtStart" type="button" 
+	title="Step one frame"><i class="icon-step-forward"></i></button>
+	
+	<button onClick="application.quit();" class="btn" type="button" title="Exit">
+	<i class="icon-off"></i></button>
+	
+	</div>
+	</span>
+	<span id="appFps">Average FPS: <span>0</span></span>
+</span>
+</form>
+
+</div>
+</div>
+
+<!--Control tab bar-->
+
+<div class="tabbable tabs-left">
+<ul id="tabBar" class="nav nav-tabs" style="">
+<!--Monitoring-->
+<li class="active" id="tabProfiling"><a data-toggle="tab">Monitor</a></li>
+	<div id="tabProfilingTabs" class="tabButtonGroup" data-toggle="buttons-radio">
+	<li><button id="tabProfilingTabGraph" class="btn tabButton">Time graph</button></li>
+	<li><button id="tabProfilingTabMemory" class="btn tabButton">Memory</button></li>
+	<li><button id="tabProfilingTabThreads" class="btn tabButton">Tasks</button></li>
+	<li><button id="tabProfilingTabTimers" class="btn tabButton">Timers</button></li>
+	</div>
+<!--Options tab-->
+<li id="tabOptions"><a data-toggle="tab">Options</a></li>
+<!--Options tab-->
+<li id="tabHelp"><a data-toggle="tab">Help</a></li>
+</ul>
+
+<div class="tab-content">
+
+    
+<!--Frame dt-->
+<div id="profilingTimeGraphView" class="viewDiv dontShowAtStart">
+<h4 class="text-left" >Frame delta time</h4>
+<div>
+<canvas class="viewCanvas"></canvas>
+</div>
+</div>
+
+<!--Thread profiler-->
+<div id="profilingThreadView" class="dontShowAtStart">
+<h4 class="text-left">Task and thread profiler</h4>
+<div class="borderedWidget">
+<canvas class="viewCanvas"></canvas>
+</div>
+</div>
+
+<!--Timer profiler-->
+<div id="profilingResultsView" class="dontShowAtStart">
+<h4 class="text-left">Timer profiling results</h4>
+<table class="table table-bordered table-condensed">
+<thead>
+<tr><th>Name</th><th>Samples</th><th>Mean</th><th>Median</th>
+<th>Standart Deviation</th><th>Total</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<!--Options-->
+<div id="optionsView" class="dontShowAtStart">
+<form>
+	<h4>Connection</h4>
+	<label class="checkbox">
+	<input id="optionsAutoconnect" type="checkbox"/>
+	Autoconnect at startup.
+	</label>
+	<label class="checkbox">
+	<input id="optionsProbe" type="checkbox"/>
+	Probe for running application when using direct connection.
+	</label>
+	
+	<!--
+	<h4>Keyboard shortcuts</h4>
+	<dl id="optionsViewShortcuts" class="dl-horizontal">
+	</dl>
+	-->
+	
+	<h4>UI</h4>
+	<label class="checkbox">
+	<input id="optionsUpdateEachFrame" type="checkbox"/>
+	Update views each frame.
+	</label>
+	
+	<h4>Data</h4>
+	<span>Store data for last the last</span>
+	<input type="text"><span>frames.</span><br>
+	<button class="btn" type="button">Export data(TODO)</button>
+	
+
+</form>
+</div>
+
+<!--help-->
+<div id="helpView" class="dontShowAtStart">
+	<h4>Introduction</h4>
+	<p>Gamedev web tools is a set of browser based tools for monitoring and 
+	modifying the behaviour of a game or an application.</p>
+	<h4>About</h4>
+	<p>Game dev web tools.</p>
+	
+	<h4>Content</h4>
+	<p>Logging and command console</p>
+	<p>Stack</p>
+
+</div>
+
+</div>
+</div>
+
+<!--Logging console-->
+<div class="fixedBottomBar">
+<div id="logoutputViewSizer" class="separatorBar separatorBar-horizontal">
+</div>
+<div id="logoutputView" class="well well-small viewLogOutput">
+<div></div>
+<input type="text" class="input-block-level"/>
+</div>
+
+</div>
+    
+<!--Load the application-->
+<script src="js/main.js"></script>
+<script src="js/ui/components.js"></script>
+<script src="js/ui/graphView.js"></script>
+<script src="js/ui/taskThreadView.js"></script>
+<script src="js/ui/ui.js"></script>
+
+</body>
+</html>
