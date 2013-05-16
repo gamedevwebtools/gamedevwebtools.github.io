@@ -118,7 +118,10 @@ ProfilingThreadView.prototype.update = function(autoscroll) {
 /// Layout the visible frames in terms of time and view.
 ProfilingThreadView.prototype.layoutFrames = function() {
 	var fdata = frameData.arrays.taskProfiles;
-	if(!fdata.length) return;
+	if(!fdata.length){
+		this.visibleFrames = null;
+		return;
+	}
 	
 	var threadCount = application.threadCount;
 	var scaleX = this.pixelsPerSecond * this.viewComponent.scaleX;
@@ -207,6 +210,7 @@ ProfilingThreadView.prototype.layoutThreads = function() {
 }
 ProfilingThreadView.prototype.foreachCell = function(f) {
 	var frames = this.visibleFrames;
+	if(!frames) return;
 	var threadLayout = this.threadLayout;
 	var scaleX = this.pixelsPerSecond * this.viewComponent.scaleX;
 	for(var i = 0;i<frames.length;++i){
@@ -243,6 +247,7 @@ ProfilingThreadView.prototype.getCellAt = function(x,y) {
 }
 ProfilingThreadView.prototype.draw = function() {
 	if(!this.isVisible || !this.needsRedraw) return;
+	this.needsRedraw = false;
 	var ctx=this.canvas.getContext("2d");
 	//Set the font.
 	ctx.font="14px Arial";
@@ -297,6 +302,7 @@ ProfilingThreadView.prototype.draw = function() {
 	ctx.textBaseline = 'middle';
 	ctx.textAlign = 'left';
 	var scaleX = this.pixelsPerSecond * this.viewComponent.scaleX;
+	if(!cells) return;
 	for(var i = 0;i<cells.length;++i){
 		var cell = cells[i];
 		var x = cell[0];
@@ -338,5 +344,4 @@ ProfilingThreadView.prototype.draw = function() {
 			}
 		}
 	}
-	this.needsRedraw = false;
 }

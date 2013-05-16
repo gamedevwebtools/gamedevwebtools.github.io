@@ -1,8 +1,8 @@
 /**
  * Render using requestAnimationCallback because if the game has high
- * FPS, we woulnd't want to redraw the graphs on each frame.
+ * FPS, we wouldn't want to redraw the graphs on each frame.
  */
-// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+// Source: http://paulirish.com/2011/requestanimationframe-for-smart-animating/
 ((function() {
     var lastTime = 0;
     var vendors = ['webkit', 'moz'];
@@ -42,6 +42,28 @@ function Ui() {
 	this.consoleHistory = [];
 	this.consoleHistoryIndex = 0;
 	
+	// message handlers.
+	this.handlers = {};
+	this.handle("monitoring.frame", function(val){
+		ui.onFrame(val);
+		ui.frameDt.update();
+		ui.memoryUsage.setXValueMax(val.t);
+	});
+	this.handle("monitoring.memory", function(val) {
+		ui.memoryUsage.update();
+	});
+	this.handle("profiling.task", function(val){
+		ui.profilingThreads.update(true);
+	});
+	
+	var opt = localStorage.getItem("ui.options");
+	if(opt){
+		this.options = JSON.parse(opt);
+		this.applyOptions();
+	} else 
+		this.resetOptions();
+	
+	
 	window.onbeforeunload = function(){
 		application.disconnect();
 	};
@@ -57,6 +79,7 @@ function Ui() {
 	function connect() {
 		application.connect($("#serverAddressInput").val());		
 	}
+	$("#serverAddressInput").val(application.options.autoConnectServer);
 	$("#applicationNotConnectedControls button").click(connect);
 	$("#serverAddressInput").jkey('enter',connect);
 	
@@ -89,9 +112,38 @@ function Ui() {
 	};
 	setTimeout(f,1000);
 	
-
+	// Keyboard input routing.
+	this.keyboardState = new Uint8Array(256);
+	for(var i = 0;i<this.keyboardState.length;++i){
+		this.keyboardState[i] = 0;
+	}
+	this.keyboardRouting = false;
+	$(window).keydown(function(event) {
+		if(ui.keyboardRouting) {
+			var key = event.keyCode;
+			if(key < ui.keyboardState.length && ui.keyboardState[key] === 0) {
+				ui.keyboardState[key] = 1;
+				application.send("input.keydown",{"key": key});
+			}
+		}
+	});
+	$(window).keyup(function(event) {
+		if(ui.keyboardRouting) {
+			var key = event.keyCode;
+			if(key < ui.keyboardState.length && ui.keyboardState[key] === 1) {
+				ui.keyboardState[key] = 0;
+				application.send("input.keyup",{"key": key});
+			}
+		}
+	});
+	$("#appKeyboardButton").click(function(){
+		ui.keyboardRouting = !ui.keyboardRouting;
+	});
+	application.on('disconnected',function() {
+		ui.resetKeyboardInput();
+	});
 	
-	// Monitoring tab
+	// Profiling/Monitoring tab
 	$("#tabProfiling a").click(function(){
 		ui.showSubTab('tabProfiling');
 	});
@@ -103,6 +155,17 @@ function Ui() {
 	});
 	$("#tabProfilingTabTimers").click(function(){
 		ui.switchToTool(ui.profilingResults);
+	});
+	$("#tabMonitorTabMemory").click(function(){
+		ui.switchToTool(ui.memoryUsage);
+	});
+	
+	// Data/Assets tab
+	$("#tabData a").click(function(){
+		ui.showSubTab('tabData');
+	});	
+	$("#tabDataTabShaders").click(function() {
+		ui.switchToTool(ui.shaders);
 	});
 	
 	// Options tab
@@ -155,11 +218,57 @@ function Ui() {
 	
 	this.logSizeBar = new SizeBar('logoutputView','logoutputViewSizer');
 	this.logSizeBar.minHeight = 80;
+	this.logSizeBar.onResize = function(width,height) {
+		ui.options.consoleHeight = height;
+		ui.saveOptions();
+	};
 	this.logHtml = '';
 	this.logDepth = 0;
 	logging.message = function(source,lvl,msg) { 
 		ui.appendToLogOutput(source,lvl,msg);
 	};
+	
+	
+	// Tools
+	this.frameDt = new FrameDtView();
+	this.profilingResults = new ProfilingTimerView();
+	this.profilingThreads = new ProfilingThreadView();
+	this.memoryUsage = new MemoryUsageView();
+	this.shaders = new TextInput("shadersView");
+}
+Ui.prototype.handle = function(msg,callback) {
+	if((typeof callback) !== "function"){
+		application.error("ui.handle needs a function callback");
+	}
+	if(msg in this.handlers){
+		this.error("The message '"+msg+"' already has a handler");
+	}
+	else this.handlers[msg] = callback;
+}
+// Resets the keyboard routing to the default state
+Ui.prototype.resetKeyboardInput = function() {
+	var send = application.isConnected();
+	for(var i = 0;i<this.keyboardState.length;++i){
+		if(this.keyboardState[i] === 1){
+			if(send) application.send("input.keyup",{"key": i});
+			this.keyboardState[i] = 0;
+		}
+	}
+	this.keyboardRouting = false;
+	$("#appKeyboardButton").removeClass("active");
+}
+Ui.prototype.resetOptions = function() {
+	this.options = { consoleHeight: 140 };
+	this.applyOptions();
+	this.saveOptions();
+}
+Ui.prototype.applyOptions = function() {
+	if(this.options.consoleHeight > 0) {
+		$("#logoutputView").height(this.options.consoleHeight);
+	}
+}
+Ui.prototype.saveOptions = function() {
+	localStorage.setItem("ui.options",JSON.stringify(this.options));
 }
 Ui.prototype.draw = function() {
 	if(this.currentTool && (typeof this.currentTool.draw) == "function") {
@@ -185,6 +294,7 @@ Ui.prototype.consoleDown = function() {
 }
 Ui.prototype.switchToConsole = function() {
 	$("#logoutputView input").focus();
+	this.resetKeyboardInput();
 }
 Ui.prototype.consoleCommand = function(value) {
 	if((typeof value) !== 'string' || value.length < 1) return;
@@ -283,10 +393,11 @@ function HelpView(widget) {
 function OptionsView(widget) {
 	this.widget = widget;
 }
-OptionsView.prototype.checkbox = function(sel,val) {
-	sel.attr('checked',val === true);
+OptionsView.prototype.checkbox = function(sel,control,map,key) {
+	sel.prop('checked',map[key] === true);
 	sel.change(function() {
-		sel.attr('checked');
+		map[key] = sel.is(':checked');
+		control.saveOptions();
 	});
 }
 OptionsView.prototype.onShow = function() {
@@ -300,7 +411,7 @@ OptionsView.prototype.onShow = function() {
 				'</dt><dd><input id="shortcut'+i
 				+'" type="text" value="'+shortcut.key+'">'+
 				"</input></dd>";
-		}		
+		}
 		$("#optionsViewShortcuts").html(str);
 		for(var i = 0;i<shortcuts.length;++i) {
 			$("#shortcut" + i).change(function(){
@@ -310,10 +421,12 @@ OptionsView.prototype.onShow = function() {
 		}
 	}
 	
-	this.checkbox($("#optionsAutoconnect"),
-		application.options.autoConnect);
-	this.checkbox($("#optionsProbe"),true);
-	this.checkbox($("#optionsUpdateEachFrame"),true);
+	this.checkbox($("#optionsAutoconnect"),application,
+		application.options,"autoConnect");
+	this.checkbox($("#optionsProbe"),application,
+		application.options,"probeForRunningApplications");
+	
+	$("#optionsUiReset").click(function(){ ui.resetOptions(); });
 }
 
 /**
@@ -353,8 +466,11 @@ SizeBar.prototype.onMouseMove = function(event) {
 		var dx = this.panX - event.clientX;
 		var dy = this.panY - event.clientY;	
 		var resultingHeight = this.widgetHeight + dy;
-		if(resultingHeight > this.minHeight)
+		if(resultingHeight > this.minHeight) {
 			this.widgetForResize.height(this.widgetHeight + dy);
+			if(this.onResize)
+				this.onResize(this.widgetWidth,resultingHeight);
+		}
 	}
 };
 
@@ -368,19 +484,55 @@ function extend(Child, Parent) {
 }
 
 /**
- * 
+ * Dt graph.
  */
 function FrameDtView() {
 	FrameDtView.superclass.constructor.call(this,
 		'profilingTimeGraphView',
-		frameData.arrays.dt,
+		[frameData.arrays.dt, frameData.arrays.rawDt],
 		{
-			labels: ["Frame start (s): ","DT (ms): "]
+			labels:[["Frame start (s): ","DT (ms): "],
+					["Frame start (s): ","Raw(unfiltered) DT (ms): "]]
 		});
 	// Plot 0 to 60 ms.
 	this.setYValueLimits(0,60);
 }
 extend(FrameDtView,GraphView);
+
+/**
+ * Memory usage graph.
+ */
+function MemoryUsageView() {
+	MemoryUsageView.superclass.constructor.call(this,
+		'memoryUsageGraphView',
+		data.memoryUsage.arrays,
+		{
+			labels: [["Time (s): ","Memory (MiB): "]]
+		});
+	this.setYValueLimits(0,1);
+	this.pointInformation = function(index,point) {
+		return data.memoryUsage.getAllocator(index);
+	}
+}
+extend(MemoryUsageView,GraphView);
+MemoryUsageView.prototype.update = function() {
+	// SetYLimits.
+	if(data.memoryUsage.max < 1)
+		this.setYValueLimits(0,1);
+	else 
+		this.setYValueLimits(0,data.memoryUsage.max + 1);
+	MemoryUsageView.superclass.update.call(this);
+}
+
+function TextInput(widget) {
+	this.widget = $("#"+widget);
+	this.textarea = $("#"+widget+" div textarea");
+}
+TextInput.prototype.onShow = function() {
+	this.resize();
+}
+TextInput.prototype.resize = function() {
+}
 
 
 /**
@@ -390,9 +542,9 @@ function ProfilingTimerView() {
 	this.widget = $("#profilingResultsView");
 	this.tableBody =  $("#profilingResultsView table tbody");
 	this.appHandler =
-		application.handlers["application.profiling.result"];
-	var self = this
-	application.handlers["application.profiling.result"] = function(val){
+		application.handlers["profiling.result"];
+	var self = this;
+	application.handlers["profiling.result"] = function(val){
 		self.appHandler(val);
 		self.tableBody.append('<tr><td>'+
 		val.name+'</td><td>'+val.samples+

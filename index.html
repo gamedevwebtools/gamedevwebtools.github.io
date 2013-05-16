@@ -29,7 +29,7 @@
 		<b>GDevWebTools</b>
 	</span>
 	<div class="input-append">
-	<input id="serverAddressInput" type="text" value="localhost:8080"/>
+	<input id="serverAddressInput" type="text" value=""/>
 	<button class="btn" type="button" 
 		title="Connect to the application/piping server">Connect</button>
 	</div>	
@@ -55,6 +55,11 @@
 	<i class="icon-off"></i></button>
 	
 	</div>
+	
+	<button id="appKeyboardButton" type="button" 
+	class="btn btn-small" data-toggle="button" 
+	title="Send keyboard input to the application">Keyboard</button>
+	
 	</span>
 	<span id="appFps">Average FPS: <span>0</span></span>
 </span>
@@ -71,10 +76,15 @@
 <li class="active" id="tabProfiling"><a data-toggle="tab">Monitor</a></li>
 	<div id="tabProfilingTabs" class="tabButtonGroup" data-toggle="buttons-radio">
 	<li><button id="tabProfilingTabGraph" class="btn tabButton">Time graph</button></li>
-	<li><button id="tabProfilingTabMemory" class="btn tabButton">Memory</button></li>
+	<li><button id="tabMonitorTabMemory" class="btn tabButton">Memory</button></li>
 	<li><button id="tabProfilingTabThreads" class="btn tabButton">Tasks</button></li>
 	<li><button id="tabProfilingTabTimers" class="btn tabButton">Timers</button></li>
 	</div>
+<!--Data
+<li id="tabData"><a data-toggle="tab">Assets</a></li>
+	<div id="tabDataTabs" class="tabButtonGroup" data-toggle="buttons-radio">
+	<li><button id="tabDataTabShaders" class="btn tabButton">Shaders</button></li>
+	</div>-->
 <!--Options tab-->
 <li id="tabOptions"><a data-toggle="tab">Options</a></li>
 <!--Options tab-->
@@ -100,6 +110,14 @@
 </div>
 </div>
 
+<!--Memory usage-->
+<div id="memoryUsageGraphView" class="viewDiv dontShowAtStart">
+<h4 class="text-left" >Memory usage</h4>
+<div>
+<canvas class="viewCanvas"></canvas>
+</div>
+</div>
+
 <!--Timer profiler-->
 <div id="profilingResultsView" class="dontShowAtStart">
 <h4 class="text-left">Timer profiling results</h4>
@@ -112,6 +130,26 @@
 </table>
 </div>
 
+<!-- -->
+<div id="shadersView" class="dontShowAtStart">
+<div class="inlineHeader">
+	<h4>Shaders</h4>
+    <div class="btn-group">
+    <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+    Shaders
+    <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+    <li><a>Shader 0</a></li>
+    <li><a>Shader 1</a></li>
+    </ul>
+    </div>
+</div>    
+	<div class="codeEditor">
+	<textarea></textarea>
+	</div>
+</div>
+
 <!--Options-->
 <div id="optionsView" class="dontShowAtStart">
 <form>
@@ -122,8 +160,18 @@
 	</label>
 	<label class="checkbox">
 	<input id="optionsProbe" type="checkbox"/>
-	Probe for running application when using direct connection.
+	Periodically probe for a running application.
 	</label>
+
+	
+	<!--<h4><br>Extensions</h4>   
+    <div class="row-fluid">
+    <ul id="optionsExtensions" class="span4 unstyled">
+    <li>View: a simple something <a><i class="icon-remove" title="remove"></i></a></li>
+    </ul>
+    </div>
+	<a>Add a new extension</a>-->
+	
 	
 	<!--
 	<h4>Keyboard shortcuts</h4>
@@ -131,16 +179,14 @@
 	</dl>
 	-->
 	
-	<h4>UI</h4>
-	<label class="checkbox">
-	<input id="optionsUpdateEachFrame" type="checkbox"/>
-	Update views each frame.
-	</label>
+	<h4><br>UI</h4>
+	<button id="optionsUiReset" class="btn" type="button">
+	Reset ui options</button>
 	
-	<h4>Data</h4>
+	<!--<h4><br>Data</h4>
 	<span>Store data for last the last</span>
 	<input type="text"><span>frames.</span><br>
-	<button class="btn" type="button">Export data(TODO)</button>
+	<button class="btn" type="button">Export data(TODO)</button>-->
 	
 
 </form>
@@ -149,14 +195,24 @@
 <!--help-->
 <div id="helpView" class="dontShowAtStart">
 	<h4>Introduction</h4>
-	<p>Gamedev web tools is a set of browser based tools for monitoring and 
-	modifying the behaviour of a game or an application.</p>
-	<h4>About</h4>
-	<p>Game dev web tools.</p>
+	<p>A set browser based tools for game development.</p>
 	
-	<h4>Content</h4>
-	<p>Logging and command console</p>
-	<p>Stack</p>
+	<h4>Tool usage</h4>
+	<ul>
+		<li><b>Play/Pause button:</b> activates/deactivates the application.</li>
+		<li><b>Power button:</b> shuts down the application.</li>
+		<li><b>Keyboard button:</b> when it is enabled, 
+		the browser sends the keyboard input to the application. </li>
+		<li><b>Console:</b> click on the console to enabled javascript input.
+		To send a message to the application type <code>
+		application.send('message')</code> or <code>
+		application.send('message',{value:'Hello world!'})</code></li>
+		<li><b>Task and thread profiler:</b> hold the left mouse button
+		down to pan around, and hold the right mouse button to zoom in and out.</li>
+	</ul>
+	
+	<h4>More</h4>
+	<p>See <a href="https://github.com/hyp/gamedevwebtools/readme.md">README.md</a> for more information.</p>
 
 </div>
 
@@ -173,7 +229,7 @@
 </div>
 
 </div>
-    
+
 <!--Load the application-->
 <script src="js/main.js"></script>
 <script src="js/ui/components.js"></script>
