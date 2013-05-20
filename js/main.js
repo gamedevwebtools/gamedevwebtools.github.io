@@ -3,7 +3,6 @@
  * 
  * This is a client side application.
  */
-window.WebSocket = window.WebSocket || window.MozWebSocket;
 
 var logging = {
 	//Sources
@@ -22,15 +21,6 @@ var logging = {
 	message: function(source,level,str) {}
 };
 
-/** Local storage fallback for older browsers */
-if(!localStorage) {
-	localStorage = {
-		getItem: function(i){ return null; },
-		setItem: function(i,v) {}
-	};
-	console.log("Warning - local storage isn't supported!");
-}
-
 /**
  * Application.
  * 
@@ -44,9 +34,17 @@ function Application() {
 	this.threadCount = 2;
 	this.active = true;
 	
-	this.ws = null;//websocket object.
-	this.averageFps = 0;
+	this.packageManager = new ApplicationPackageManager();
 	
+	this.ws = null;//websocket object.
+	if(window)
+		window.onbeforeunload = (function(){
+			if(this.ws) {
+				this.ws.onclose = function() {};
+				this.ws.close();
+			}
+		}).bind(this);
+		
 	var opt = localStorage.getItem('application.options');
 	if(opt){
 		this.options = JSON.parse(opt);
@@ -54,6 +52,11 @@ function Application() {
 	
 	// message handlers.
 	this.handlers = {};
+	this.handle("gamedevwebtools.unhandled", function(msg) {
+		application.error(
+			"The application doesn't recognise the message with the type '"+
+			msg.msgtype+"'");
+	});
 	this.handle("tooling.pipe.application.connected", function(frameId,val){
 		application.log('The application connected to the piping server.');
 	});
@@ -193,6 +196,9 @@ Application.prototype.resetProbing = function() {
 	}
 }
 Application.prototype.onInit = function() {
+	// packages.
+	this.packageManager.internal.load();
+	
 	this.probeForConnectionRunning = false;
 	this.resetProbing();
 	if(this.options.autoConnect !== true) return;
@@ -202,7 +208,7 @@ Application.prototype.onInit = function() {
 	}
 	function onDisconnected() {
 		application.log(
-		"Couldn't automatically connect to ws://"+
+		"Couldn't connect to ws://"+
 		application.options.autoConnectServer+"!");
 		cleanup();
 	}
